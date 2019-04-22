@@ -26,10 +26,10 @@ definition(
 
 preferences {
   section("When there’s movement...") {
-    input "motion1", "capability.motionSensor", title: "Where?", required: true, multiple: false
+    input "motion1", "capability.motionSensor", title: "Where?", required: true, multiple: true
   }
   section("Turn on a light...") {
-    input "switch1", "capability.switch", required: true, multiple: false
+    input "switch1", "capability.switch", required: true, multiple: true
   }
   section("Turn on between what times?") {
     input "fromTime", "time", title: "From", required: true
