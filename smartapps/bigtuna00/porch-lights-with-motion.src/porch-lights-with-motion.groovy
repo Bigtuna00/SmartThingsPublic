@@ -47,58 +47,33 @@ def updated() {
 }
 
 def initialize() {
-  subscribe(switch1, "switch.off", switchHandler)
-  schedule("0 0 12 * * ?", sunriseSunsetHandler)
-  if (isactive()) {
-    subscribe(motion1, "motion.active", motionActiveHandler)
-  }
-  sunriseSunsetHandler()
+  subscribeToMotion()
 }
 
 def motionActiveHandler(evt) {
   log.debug "Motion detected"
-  switch1.on()
-  runIn(60 * 5, OffTimeHandler)
-}
-
-def switchHandler(evt) {
-  log.debug "Switch turned off"
-  runIn(15, reupHandler)
-}
-
-def OffTimeHandler() {
-  log.debug "OffTimeHandler"
-  unsubscribe(motion1)
-  switch1.off()
-  runIn(15, reupHandler)
-}
-
-def reupHandler() {
-  log.debug "reupHandler"
   if (isactive()) {
-    subscribe(motion1, "motion.active", motionActiveHandler)
+    switch1.on()
+    runIn(60 * 5, lightsOffIgnoreMotion)
   }
+}
+
+def lightsOffIgnoreMotion() {
+  log.debug "lightsOffIgnoreMotion"
+  if (isactive()) {
+    unsubscribe(motion1)
+    switch1.off()
+    runIn(15, subscribeToMotion)
+  }
+}
+
+def subscribeToMotion() {
+  log.debug "subscribeToMotion"
+  subscribe(motion1, "motion.active", motionActiveHandler)
 }
 
 def isactive() {
   def between = timeOfDayIsBetween(fromTime, toTime, new Date(), location.timeZone)
+  log.debug "Active? ${between}"
   return between
-  log.debug "Active?:${between}"
-}
-
-// I beleive these are no longer really needed since I'm using start and end times
-// from the user.
-def sunsetHandler() {
-  subscribe(motion1, "motion.active", motionActiveHandler)
-}
-
-def sunriseHandler() {
-  unsubscribe(motion1)
-  switch1.off()
-}
-def sunriseSunsetHandler() {
-  log.debug "Setting Sunrise Sunset times"
-  def WRTimes = getSunriseAndSunset(zipCode: "95046")
-  schedule(WRTimes.sunrise, sunriseHandler)
-  schedule(WRTimes.sunset, sunsetHandler)
 }
