@@ -81,16 +81,14 @@ metadata {
 		details(["FGMS", "battery", "temperature", "illuminance", "motionTile", "multiStatus"])
 	}
 	preferences {
-
 		input(
-			title: "Fibaro Motion Sensor ZW5 manual",
-			description: "Tap to view the manual.",
-			image: "http://manuals.fibaro.com/wp-content/uploads/2017/02/ms_icon.png",
-			url: "http://manuals.fibaro.com/content/manuals/en/FGMS-001/FGMS-001-EN-T-v2.1.pdf",
-			type: "href",
-			element: "href"
+			title: "Fibaro Motion Sensor settings",
+			description: "Device's settings update is executed when device wakes up.\n" +
+					"It may take up to 2 hours (for default wake up interval). \n" +
+					"If you want immediate change, manually wake up device by clicking B-button once.",
+			type: "paragraph",
+			element: "paragraph"
 		)
-
 		parameterMap().findAll { (it.num as Integer) != 54 }.each {
 			input(
 				title: "${it.num}. ${it.title}",
@@ -272,10 +270,6 @@ def zwaveEvent(physicalgraph.zwave.commands.batteryv1.BatteryReport cmd) {
 def zwaveEvent(physicalgraph.zwave.commands.wakeupv2.WakeUpNotification cmd) {
 	logging("${device.displayName} woke up", "debug")
 	def cmds = []
-	if (state.wakeUpInterval?.state == "notSynced" && state.wakeUpInterval?.value != null) {
-		cmds << zwave.wakeUpV2.wakeUpIntervalSet(seconds: state.wakeUpInterval.value as Integer, nodeid: zwaveHubNodeId)
-		state.wakeUpInterval.state = "synced"
-	}
 	def event = createEvent(descriptionText: "${device.displayName} woke up", displayed: false)
 	cmds << encap(zwave.batteryV1.batteryGet())
 	cmds << "delay 500"
@@ -284,7 +278,7 @@ def zwaveEvent(physicalgraph.zwave.commands.wakeupv2.WakeUpNotification cmd) {
 	cmds << encap(zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType: 3, scale: 1))
 	cmds << "delay 1200"
 	cmds << encap(zwave.wakeUpV1.wakeUpNoMoreInformation())
-	runIn(1, "syncNext")
+	runIn(1, "syncNext", [overwrite: true, forceForLocallyExecuting: true])
 	[event, response(cmds)]
 }
 
@@ -464,10 +458,10 @@ def syncNext() {
 		}
 	}
 	if (cmds) {
-		runIn(10, "syncCheck")
+		runIn(10, "syncCheck", [overwrite: true, forceForLocallyExecuting: true])
 		sendHubCommand(cmds, 1000)
 	} else {
-		runIn(1, "syncCheck")
+		runIn(1, "syncCheck", [overwrite: true, forceForLocallyExecuting: true])
 	}
 }
 

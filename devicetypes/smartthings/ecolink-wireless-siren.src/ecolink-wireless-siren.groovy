@@ -96,6 +96,14 @@ def createEvents(value) {
 }
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
+	if (cmd.commandClass == 0x6C && cmd.parameter.size >= 4) { // Supervision encapsulated Message
+		// Supervision header is 4 bytes long, two bytes dropped here are the latter two bytes of the supervision header
+		cmd.parameter = cmd.parameter.drop(2)
+		// Updated Command Class/Command now with the remaining bytes
+		cmd.commandClass = cmd.parameter[0]
+		cmd.command = cmd.parameter[1]
+		cmd.parameter = cmd.parameter.drop(2)
+	}
 	def encapsulatedCommand = cmd.encapsulatedCommand()
 	def srcEndpoint = cmd.sourceEndPoint
 	def destEnd = cmd.destinationEndPoint
@@ -173,9 +181,8 @@ def addChildren() {
 	endPoints.each {
 		String childDni = "${device.deviceNetworkId}-ep$it"
 		String componentLabel =	 "$device.displayName $it"
-		String ch = "ch$it"
 		
-		addChildDevice("Z-Wave Binary Switch Endpoint Siren", childDni, device.hub.id,[completedSetup: true, label: componentLabel, isComponent: false, componentName: ch, componentLabel: componentLabel])
+		addChildDevice("Z-Wave Binary Switch Endpoint Siren", childDni, device.hub.id,[completedSetup: true, label: componentLabel, isComponent: false])
 	}
 }
 

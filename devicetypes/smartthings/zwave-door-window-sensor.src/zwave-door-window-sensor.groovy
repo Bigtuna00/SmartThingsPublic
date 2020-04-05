@@ -33,6 +33,7 @@ metadata {
 		fingerprint mfr: "0086", prod: "0002", model: "001D", deviceJoinName: "Aeotec Door/Window Sensor (Gen 5)"
 		fingerprint mfr: "0086", prod: "0102", model: "0070", deviceJoinName: "Aeotec Door/Window Sensor 6" //US
 		fingerprint mfr: "0086", prod: "0002", model: "0070", deviceJoinName: "Aeotec Door/Window Sensor 6" //EU
+		fingerprint mfr: "0086", prod: "0202", model: "0070", deviceJoinName: "Aeotec Door/Window Sensor 6" //AU
 		fingerprint mfr: "0086", prod: "0102", model: "0059", deviceJoinName: "Aeotec Recessed Door Sensor"
 		fingerprint mfr: "014A", prod: "0001", model: "0002", deviceJoinName: "Ecolink Door/Window Sensor"
 		fingerprint mfr: "014A", prod: "0001", model: "0003", deviceJoinName: "Ecolink Tilt Sensor"
@@ -52,7 +53,11 @@ metadata {
 		fingerprint mfr: "0214", prod: "0002", model: "0001", deviceJoinName: "BeSense Door/Window Detector"
 		fingerprint mfr: "0086", prod: "0002", model: "0078", deviceJoinName: "Aeotec Door/Window Sensor Gen5" //EU
 		fingerprint mfr: "0371", prod: "0102", model: "0007", deviceJoinName: "Aeotec Door/Window Sensor 7" //EU
-		fingerprint mfr: "0371", prod: "0002", model: "0007", deviceJoinName: "Aeotec Door/Window Sensor 7" //US
+		fingerprint mfr: "0371", prod: "0002", model: "0007", deviceJoinName: "Aeotec Door/Window Sensor 7" //US          
+    		fingerprint mfr: "0060", prod: "0002", model: "0003", deviceJoinName: "Everspring Door/Window Sensor" //US & EU
+		fingerprint mfr: "0371", prod: "0102", model: "00BB", deviceJoinName: "Aeotec Recessed Door Sensor 7" //US
+		fingerprint mfr: "0371", prod: "0002", model: "00BB", deviceJoinName: "Aeotec Recessed Door Sensor 7" //EU
+    		fingerprint mfr: "0109", prod: "2022", model: "2201", deviceJoinName: "Vision Recessed Door Sensor" //AU
 	}
 
 	// simulator metadata
@@ -87,7 +92,7 @@ private getCommandClassVersions() {
 def parse(String description) {
 	def result = null
 	if (description.startsWith("Err 106")) {
-		if ((zwaveInfo.zw == null && state.sec != 0) || zwaveInfo?.zw?.endsWith("s")) {
+		if ((zwaveInfo.zw == null && state.sec != 0) || zwaveInfo?.zw?.contains("s")) {
 			log.debug description
 		} else {
 			result = createEvent(
@@ -271,6 +276,14 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd) {
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
 	def result = null
+	if (cmd.commandClass == 0x6C && cmd.parameter.size >= 4) { // Supervision encapsulated Message
+		// Supervision header is 4 bytes long, two bytes dropped here are the latter two bytes of the supervision header
+		cmd.parameter = cmd.parameter.drop(2)
+		// Updated Command Class/Command now with the remaining bytes
+		cmd.commandClass = cmd.parameter[0]
+		cmd.command = cmd.parameter[1]
+		cmd.parameter = cmd.parameter.drop(2)
+	}
 	def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
 	log.debug "Command from endpoint ${cmd.sourceEndPoint}: ${encapsulatedCommand}"
 	if (encapsulatedCommand) {
@@ -304,7 +317,7 @@ def initialPoll() {
 }
 
 private command(physicalgraph.zwave.Command cmd) {
-	if ((zwaveInfo.zw == null && state.sec != 0) || zwaveInfo?.zw?.endsWith("s")) {
+	if ((zwaveInfo?.zw == null && state.sec != 0) || zwaveInfo?.zw?.contains("s")) {
 		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
 	} else {
 		cmd.format()

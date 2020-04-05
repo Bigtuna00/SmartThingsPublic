@@ -28,6 +28,7 @@ metadata {
 
 		fingerprint mfr:"0371", prod:"0002", model:"0005", deviceJoinName: "Aeotec TriSensor"	//ZW005-C EU
 		fingerprint mfr:"0371", prod:"0102", model:"0005", deviceJoinName: "Aeotec TriSensor" 	//ZW005-A US
+	        fingerprint mfr:"0371", prod:"0202", model:"0005", deviceJoinName: "Aeotec TriSensor" 	//ZW005-B AU
 	}
 
 	tiles(scale: 2) {
@@ -192,7 +193,7 @@ def sensorMotionEvent(value) {
 }
 
 private secure(cmd) {
-	if(zwaveInfo.zw.endsWith("s")) {
+	if(zwaveInfo.zw.contains("s")) {
 		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
 	} else {
 		cmd.format()

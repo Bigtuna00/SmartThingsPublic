@@ -29,6 +29,8 @@ metadata {
 		fingerprint mfr: "014A", prod: "0004", model: "0001", deviceJoinName: "Ecolink Motion Sensor"  // Ecolink motion +
 		fingerprint mfr: "0060", prod: "0001", model: "0002", deviceJoinName: "Everspring Motion Sensor"  // Everspring SP814
 		fingerprint mfr: "0060", prod: "0001", model: "0003", deviceJoinName: "Everspring Motion Sensor"  // Everspring HSP02
+		fingerprint mfr: "0060", prod: "0001", model: "0005", deviceJoinName: "Everspring Motion Detector" //Everspring SP817
+		fingerprint mfr: "0060", prod: "0001", model: "0006", deviceJoinName: "Everspring Motion Detector"
 		fingerprint mfr: "011A", prod: "0601", model: "0901", deviceJoinName: "Enerwave Motion Sensor"  // Enerwave ZWN-BPC
 		fingerprint mfr: "0063", prod: "4953", model: "3133", deviceJoinName: "GE Portable Smart Motion Sensor"
 		fingerprint mfr: "0214", prod: "0003", model: "0002", deviceJoinName: "BeSense Motion Detector"
@@ -234,6 +236,14 @@ def zwaveEvent(physicalgraph.zwave.commands.crc16encapv1.Crc16Encap cmd)
 
 def zwaveEvent(physicalgraph.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
 	def result = null
+	if (cmd.commandClass == 0x6C && cmd.parameter.size >= 4) { // Supervision encapsulated Message
+		// Supervision header is 4 bytes long, two bytes dropped here are the latter two bytes of the supervision header
+		cmd.parameter = cmd.parameter.drop(2)
+		// Updated Command Class/Command now with the remaining bytes
+		cmd.commandClass = cmd.parameter[0]
+		cmd.command = cmd.parameter[1]
+		cmd.parameter = cmd.parameter.drop(2)
+	}
 	def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
 	log.debug "Command from endpoint ${cmd.sourceEndPoint}: ${encapsulatedCommand}"
 	if (encapsulatedCommand) {
@@ -271,6 +281,7 @@ def initialPoll() {
 	}
 	request << zwave.batteryV1.batteryGet()
 	request << zwave.sensorBinaryV2.sensorBinaryGet(sensorType: 0x0C) //motion
+	request << zwave.notificationV3.notificationGet(notificationType: 0x07, event: 0x08) //motion for Everspiring
 	commands(request) + ["delay 20000", zwave.wakeUpV1.wakeUpNoMoreInformation().format()]
 }
 
